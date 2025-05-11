@@ -1,4 +1,4 @@
-name: Clone and Test
+name: Manual Grading with Input Parameters
 
 on:
   workflow_dispatch:
@@ -11,13 +11,10 @@ on:
       assignment_num:
         description:  'The assignment number to be graded. Should correspond to the unit testing structure'
         required: true
-      case_study_name:
-        description: 'ex: securebank'
-        required: true
 
 # declaring all variables that will change
 env:
-  ORG_NAME: creating-ai-enabled-systems-spring-2025
+  ORG_NAME: JH-705-603
 
 jobs:
    pull-repo-run-test:
@@ -34,7 +31,6 @@ jobs:
         uses: actions/checkout@v4
         with: 
           repository: '${{ env.ORG_NAME }}/${{ github.event.inputs.repo_name }}'
-          token: ${{ secrets.TOKEN }}
           path: ${{ github.event.inputs.repo_name }}
           ref: main
       
@@ -46,13 +42,13 @@ jobs:
           pip install pandas datetime pyarrow timezonefinder flask urllib3
 
           cd $GITHUB_WORKSPACE
-          cp -r ./assignment-${{ github.event.inputs.assignment_num }}-test/* ./${{ github.event.inputs.repo_name }}/${{ github.event.inputs.case_study_name }}/
-          pip install -r requirements.txt
+          cp -r ./assignment-${{ github.event.inputs.assignment_num }}-test/* ./${{ github.event.inputs.repo_name }}/techtrack/
+          pip install -r ./${{ github.event.inputs.repo_name }}/techtrack/requirements.txt
 
       # Runs unit test
       - name: Runs all unit tests
         run: |
-          cd $GITHUB_WORKSPACE/${{ github.event.inputs.repo_name }}/${{ github.event.inputs.case_study_name }}/
+          cd $GITHUB_WORKSPACE/${{ github.event.inputs.repo_name }}/techtrack/
           python -m unittest -v unit-test.py 2> /home/runner/work/${{ github.event.inputs.artifact_name }} || true
 
       - name: Save output as artifact
