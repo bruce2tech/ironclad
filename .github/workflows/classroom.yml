@@ -1,0 +1,50 @@
+name: Grading
+
+on: push
+
+
+# declaring all variables that will change
+env:
+  ORG_NAME: JH-705-603
+
+jobs:
+   pull-repo-run-test:
+    runs-on: ubuntu-latest
+    outputs:
+      result: ${{ steps.set_output.outputs.result }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      # Checks-out the student repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Clone student repo
+        uses: actions/checkout@v4
+        with: 
+          repository: '${{ github.repository }}'
+          path: ${{ github.repository }}
+          ref: main
+      
+      - name: setup assignment 6
+        run: |
+          # install the python packages for the grading repo
+          # pip install -r requirements.txt
+          python -m pip install --upgrade pip
+          pip install pandas datetime pyarrow timezonefinder flask urllib3
+
+          cd $GITHUB_WORKSPACE
+          cp -rf ./assignment-6-test/* ./${{ github.repository }}/ironclad/
+          pip install -r ./${{ github.repository }}/techtrack/requirements.txt
+
+      # Runs unit test
+      - name: Runs all unit tests for assignment 6
+        run: |
+          cd $GITHUB_WORKSPACE/${{ github.repository }}/ironclad/
+          python -m unittest -v unit-test.py 2> /home/runner/work/ironclad || true
+
+      - name: Save output as artifact
+        id: set_output_6
+        uses: actions/upload-artifact@v4
+        with:
+          name:  techtrack-3
+          path:  /home/runner/work/ironclad
