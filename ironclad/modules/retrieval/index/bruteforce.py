@@ -2,6 +2,13 @@ import numpy as np
 import pickle
 import faiss
 
+########################################
+# ASSIGNMENT 5, TASK 1: 
+#         Implement `/add` endpoint to
+#         add the provided image to the 
+#         catalog.
+########################################
+
 class FaissBruteForce:
     """
     A brute-force FAISS index for storing embeddings and their associated metadata,

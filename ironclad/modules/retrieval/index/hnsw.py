@@ -2,6 +2,12 @@ import faiss
 import numpy as np
 import pickle
 
+########################################
+# ASSIGNMENT 5, TASK 3: 
+#         Implement `/add` endpoint to
+#         add the provided image to the 
+#         catalog.
+########################################
 
 class FaissHNSW:
     """
