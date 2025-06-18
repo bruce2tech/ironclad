@@ -2,9 +2,13 @@
 Flask app for processing images.
 
 This script provides two endpoints:
-1. /add: Adds a provided image (with an associated name) to the gallery and extracts/index embeddings to the vector database.
+1. /add: Adds a provided image (with an associated name) to the gallery and extracts/index embeddings to the catalog.
          This image could be associated with a new or existing identity.
-2. /identify: Processes an probe image and returns the top-k identities. 
+2. /identify: Processes an probe image and returns the top-k identities. For example,
+    {
+        "message": f"Returned top-{k} identities",
+        "ranked identities": ["{First Name}_{Last Name}", "{First Name}_{Last Name}", ...]). 
+    }
 
 Usage:
     Run the app with: python app.py
@@ -68,7 +72,7 @@ def add():
     # ASSIGNMENT 5, TASK 4: 
     #         Implement `/add` endpoint to
     #         add the provided image to the 
-    #         catalog.
+    #         catalog/gallery.
     ########################################
 
     return jsonify({
