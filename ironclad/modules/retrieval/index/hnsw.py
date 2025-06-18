@@ -116,7 +116,6 @@ class FaissHNSW:
         return instance
 
 
-# Example usage of FaissHNSW class.
 if __name__ == "__main__":
 
     # Initialize a FaissHNSW index with embedding dimension 4 using custom HNSW parameters.

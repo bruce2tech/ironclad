@@ -114,8 +114,6 @@ class FaissBruteForce:
 
 
 if __name__ == "__main__":
-    # Example usage of FaissBruteForce class.
-
     # Choose the metric: 'euclidean', 'cosine', or 'dot_product'
     metric = 'cosine'
     index = FaissBruteForce(dim=4, metric=metric)
