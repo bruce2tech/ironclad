@@ -12,10 +12,17 @@ Usage:
     Sample curl command for /add:
         curl -X POST -F "image=@/path/to/image.jpg" -F "name=Firstname_Lastname" http://localhost:5000/add
 """
+import os.path
 
 import numpy as np
-from flask import Flask, request, jsonify
+import torch
 from PIL import Image
+from flask import Flask, request, jsonify
+
+from modules.extraction.embedding import Embedding
+from modules.extraction.preprocessing import Preprocessing
+from modules.retrieval.index.hnsw import FaissHNSW
+from modules.retrieval.search import FaissSearch
 
 app = Flask(__name__)
 
@@ -23,10 +30,20 @@ app = Flask(__name__)
 # (Configure these parameters according to your design decisions)
 DEFAULT_K = '3'
 MODEL = 'vggface2'
-INDEX = 'bruteforce'
-SIMILARITY_MEASURE = 'euclidean'
+INDEX = 'hnsw'
+SIMILARITY_MEASURE = 'cosine'
+SAVE_INDEX = False
+INDEX_PATH = 'scripts/faiss_hnsw_index.pkl'
 # Add more if needed...
-
+preprocessor = Preprocessing()
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+model = Embedding(pretrained=MODEL, device=device)
+index = None
+if SAVE_INDEX and os.path.exists(INDEX_PATH):
+    index = FaissHNSW.load(INDEX_PATH) # Load data from index
+else:
+    index = FaissHNSW(dim=512, metric=SIMILARITY_MEASURE)
+search = FaissSearch(index, metric=SIMILARITY_MEASURE)
 
 @app.route('/identify', methods=['POST'])
 def identify():
@@ -71,14 +88,16 @@ def identify():
     #         to return the top-k identities
     #         of the provided probe.
     ########################################
-
+    image_tensor = preprocessor.process(Image.fromarray(image))
+    embedding = model.encode(image_tensor)
+    distances, indices, metadatas = search.search(embedding, k)
+    print("distances: ", distances)
+    print("indices: ", indices)
+    print("metadatas: ", metadatas)
+    identities = [name for name in metadatas[0] if name is not None]
     return jsonify({
         "message": f"Returned top-{k} identities",
-        "ranked identities": [
-                              "Firstname_Lastname", # Top 1 prediction
-                              "Firstname_Lastname", # Top 2 prediction
-                              "Firstname_Lastname", # Top 3 prediction
-                             ]
+        "ranked identities": identities
     }), 200
 
 
@@ -123,6 +142,15 @@ def add():
     #         add the provided image to the 
     #         catalog.
     ########################################
+    if name in index.metadata:
+        return jsonify({"Error": f"The image {name} already existed."}), 400
+
+    image_tensor = preprocessor.process(Image.fromarray(image))
+    embedding = model.encode(image_tensor)
+    index.add_embeddings([embedding], [name])
+
+    if SAVE_INDEX:
+        index.save(INDEX_PATH)
 
     return jsonify({
         "message": f"New image added to gallery (as {name}) and indexed into catalog."
