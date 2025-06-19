@@ -42,13 +42,13 @@ jobs:
           pip install pandas datetime pyarrow timezonefinder flask urllib3
 
           cd $GITHUB_WORKSPACE
-          cp -r ./assignment-${{ github.event.inputs.assignment_num }}-test/* ./${{ github.event.inputs.repo_name }}/techtrack/
-          pip install -r ./${{ github.event.inputs.repo_name }}/techtrack/requirements.txt
+          cp -r ./assignment-${{ github.event.inputs.assignment_num }}-test/* ./${{ github.event.inputs.repo_name }}/ironclad/
+          pip install -r ./${{ github.event.inputs.repo_name }}/ironclad/requirements.txt
 
       # Runs unit test
       - name: Runs all unit tests
         run: |
-          cd $GITHUB_WORKSPACE/${{ github.event.inputs.repo_name }}/techtrack/
+          cd $GITHUB_WORKSPACE/${{ github.event.inputs.repo_name }}/ironclad/
           python -m unittest -v unit-test.py 2> /home/runner/work/${{ github.event.inputs.artifact_name }} || true
 
       - name: Save output as artifact

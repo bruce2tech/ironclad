@@ -1,0 +1,272 @@
+name: CI
+
+# Controls when the workflow will run
+on:
+
+  schedule:
+    # utc: min hour day month day-of-week
+    # 3am on Monday
+    - cron: "00 08 10 02 01" # assignment 3
+    - cron: "00 08 24 02 01" # assignment 4
+    - cron: "00 08 03 03 01" # assignment 5
+    
+  workflow_dispatch:
+    inputs:
+      assignment_num:
+        type: string
+        required: true
+        description: 'The assignment number to be graded. Should correspond to the unit testing structure'
+      case_study_name:
+        type: string
+        required: true
+        description: 'The name of the case study. Ex: securebank'
+      specific_repo_name:
+        type: string
+        required: false
+        description: 'Particular single repository to run'
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  ACTION_STEP_DEBUG: true
+
+jobs:
+
+  setup-inputs:
+    runs-on: ubuntu-24.04
+
+    outputs:
+      assignment_num: ${{ steps.set-variable.outputs.assignment_num }}
+      case_study_name: ${{ steps.set-variable.outputs.case_study_name }}
+      specific_repo_name: ${{ steps.set-variable.outputs.specific_repo_name }}
+
+    steps:
+      # set inputs for assignment 5 testing
+      - name: Set input variables for Assignment 5 scheduled run
+        if: github.event_name == 'schedule' && (github.event.schedule == '00 08 10 02 01')
+        run: |
+          echo "ASSIGNMENT_NUM=5" >> $GITHUB_ENV
+          echo "CASE_STUDY_NAME=securebank" >> $GITHUB_ENV
+
+      # set inputs for assignment 6 testing
+      - name: Set input variables for Assignment 6 scheduled run
+        if: github.event_name == 'schedule' && (github.event.schedule == '00 08 24 02 01')
+        run: |
+          echo "ASSIGNMENT_NUM=6" >> $GITHUB_ENV
+          echo "CASE_STUDY_NAME=ironclad" >> $GITHUB_ENV
+
+     
+      # set input variables when the workflow is manually started
+      - name: Set input variables for manual dispatch
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "ASSIGNMENT_NUM=${{ github.event.inputs.assignment_num }}" >> $GITHUB_ENV
+          echo "CASE_STUDY_NAME=${{ github.event.inputs.case_study_name }}" >> $GITHUB_ENV
+          echo "SPECIFIC_REPO_NAME=${{ github.event.inputs.specific_repo_name }}" >> $GITHUB_ENV
+      
+      # set variables to be read from other jobs no matter the start of the workflow
+      - name: Set all variables
+        id: set-variable
+        run: |
+          echo "::set-output name=assignment_num::$ASSIGNMENT_NUM"
+          echo "::set-output name=case_study_name::$CASE_STUDY_NAME"
+          echo "::set-output name=specific_repo_name::$SPECIFIC_REPO_NAME"
+  
+  get-all-repo-names:
+    permissions: write-all
+    runs-on: ubuntu-24.04
+
+    needs: setup-inputs
+
+    outputs:
+      repo_names: ${{ steps.get-all-repo-names.outputs.repo_names }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Read repository names
+        id: get-all-repo-names
+        run: |
+
+          # check if the singular repo name was provided
+          if [ -z "${{ needs.setup-inputs.outputs.specific_repo_name }}"]; then
+            repos=$(jq -R . < repo-names.txt | jq -s . | tr -d '\n')   
+          else
+            repos=("${{ needs.setup-inputs.outputs.specific_repo_name }}")
+          fi
+          
+          echo $repos
+
+          # set the list to the job output
+          echo "::set-output name=repo_names::$repos"
+
+  dispatch-all-repos:
+    permissions: write-all
+    runs-on: ubuntu-24.04
+
+    needs: 
+      - get-all-repo-names
+      - setup-inputs
+    
+    outputs:
+      workflow_ids: ${{ steps.dispatch-all-repos.outputs.workflow_ids }}
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas datetime pyarrow timezonefinder
+
+      - name: Spawning all the unit testing
+        id: dispatch-all-repos
+        run: |
+          
+          # creating the list that will store all the workflow ids for the individual
+          # workflows created per student repository
+          workflow_ids=()
+
+          repo_list="${{ needs.get-all-repo-names.outputs.repo_names }}"
+          
+          echo "Complete repo list: ${repo_list[@]}"
+          
+          # iterate through all the repository names and create a workflow for the unit testing
+          for repo_name in $(echo "$repo_list" | sed "s/,/ /g; s/\[//g; s/\]//g"); do
+            echo "Kicking off workflow for ${repo_name}"
+            
+            gh workflow run clone-and-test.yml -f repo_name="${repo_name}" -f artifact_name="${repo_name}-assignment-${{ needs.setup-inputs.outputs.assignment_num }}-results.txt" -f assignment_num="${{ needs.setup-inputs.outputs.assignment_num }}" -f case_study_name="${{ needs.setup-inputs.outputs.case_study_name }}"
+            
+            # sleep for the workflow to run, otherwise we would get the incorrect id
+            sleep 5
+            
+            # get the id of the most recent workflow of this clone-and-test type
+            run_id=$(gh run list --workflow clone-and-test.yml --json databaseId --limit 1 -q '.[0].databaseId')
+            echo "Found Run ID: $run_id"
+
+            # add to our running list of ids
+            workflow_ids+=("$run_id")
+          done
+
+          echo "Complete workflow id list: ${workflow_ids[@]}"
+
+          # set the list to the job output
+          echo "::set-output name=workflow_ids::$(IFS=,; echo "${workflow_ids[*]}")"
+
+  wait-for-workflows-and-finish:
+    permissions: write-all
+    runs-on: ubuntu-24.04
+
+    needs: dispatch-all-repos
+
+    outputs:
+      failed_ids: ${{ steps.wait-for-workflows.outputs.failed_ids }}
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Wait for workflow completion
+        id: wait-for-workflows
+        run: |
+          # Get ids for all workflows spawned in previous job
+          workflow_ids="${{ needs.dispatch-all-repos.outputs.workflow_ids }}"
+          echo "Complete workflow id list: ${workflow_ids[@]}"
+
+          # create list to track all successful and failed workflows
+          success_wfs=()
+          failed_wfs=()
+
+          # create the directory we will store the artifacts
+          mkdir artifacts
+
+          # iterate through all workflow ids and wait for them to be completed
+          for wf_id in $(echo "$workflow_ids" | sed "s/,/ /g; s/\[//g; s/\]//g"); do
+            echo "Checking status for workflow ID: $wf_id"
+            
+            # Check status of this workflow until it is complete
+            while true; do
+
+              # Get the wf status and conclusion using gh CLI
+              status=$(gh run view "$wf_id" --json status -q '.status')
+              conclusion=$(gh run view "$wf_id" --json conclusion -q '.conclusion')
+
+              # Check if workflow is completed, it not, check again
+              if [[ "$status" == "completed" ]]; then
+                if [[ "$conclusion" == "success" ]]; then
+                  success_wfs+=("$wf_id")
+                  echo "Workflow $wf_id succeeded."
+
+                  gh run download "$wf_id" --dir ./artifacts
+                  echo "Downloaded artifact from $wf_id"
+                else
+                  failed_wfs+=("$wf_id")
+                  echo "Worfklow $wf_id failed."
+                fi
+
+                # if wf is completed, get out of loop and move onto next wf
+                break
+              fi
+
+              # wait for two more seconds before checking the workflow status again
+              sleep 2
+            done
+          done
+
+          # Output the lists of successful and failed workflows
+          echo "Successfully completed workflows: ${success_wfs[@]}"
+          echo "Failed workflows: ${failed_wfs[@]}"
+
+          # set the list to the job output
+          echo "::set-output name=failed_ids::$(IFS=,; echo "${failed_wfs[*]}")"
+
+      - name: Write summaries
+        run: |
+          failed_wfs="${{ needs.wait-for-workflows.outputs.failed_ids }}"
+          workflow_ids="${{ needs.dispatch-all-repos.outputs.workflow_ids }}"
+          repo_names="${{ needs.get-all-repo-names.outputs.repo_names }}"
+
+          # create list that will hold repo-names that failed the workflows
+          failed_names=()
+
+          # Iterate through the failed workflows
+          for failed_wf in "${failed_wfs[@]}"; do
+          
+            # Find the index of the failed workflow in workflow_ids
+            for i in "${!workflow_ids[@]}"; do
+              if [[ "${workflow_ids[$i]}" == "$failed_wf" ]]; then
+                
+                # at this i index, the workflow failed. Match to the corresponding repo name
+                failed_names+=("${repo_names[$i]}")
+
+                break
+              fi
+            done
+          done
+
+          # write list of failed repos to file
+          printf "%s\n" "${failed_names[@]}" > failed_repo_names.txt
+          mv failed_repo_names.txt /home/runner/work/failed_repo_names.txt    
+
+      - name: Combine all
+        run: |
+          # create directory and move all .txt files from artifacts in there. This prevents a bunch of folder layering
+          mkdir -p ./final_artifacts
+          find ./artifacts -type f -exec mv {} ./final_artifacts/ \;
+          mv /home/runner/work/failed_repo_names.txt ./final_artifacts/failed_repo_names.txt
+
+          # zip all unit test results txt files and the list of failed repo names
+          zip -r all_results.zip ./final_artifacts/*
+          mv all_results.zip /home/runner/work/all_results.zip
+          echo "zipped artifacts together"
+
+      - name: Save output as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name:  ${{ github.event.inputs.repo_name }}_all_results
+          path:  /home/runner/work/all_results.zip
+
