@@ -2,7 +2,7 @@ Flask
 torch
 torchvision
 facenet-pytorch
-PIL
+Pillow
 faiss-cpu
 scikit-learn
 matplotlib
