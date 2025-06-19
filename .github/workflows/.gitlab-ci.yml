@@ -52,7 +52,7 @@ jobs:
         if: github.event_name == 'schedule' && (github.event.schedule == '00 08 24 02 01')
         run: |
           echo "ASSIGNMENT_NUM=6" >> $GITHUB_ENV
-          echo "CASE_STUDY_NAME=techtrack" >> $GITHUB_ENV
+          echo "CASE_STUDY_NAME=ironclad" >> $GITHUB_ENV
 
      
       # set input variables when the workflow is manually started

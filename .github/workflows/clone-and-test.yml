@@ -39,7 +39,6 @@ jobs:
           # install the python packages for the grading repo
           # pip install -r requirements.txt
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
           pip install pandas datetime pyarrow timezonefinder flask urllib3
 
           cd $GITHUB_WORKSPACE
