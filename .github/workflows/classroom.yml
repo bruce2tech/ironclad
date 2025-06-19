@@ -30,11 +30,12 @@ jobs:
           # install the python packages for the grading repo
           # pip install -r requirements.txt
           python -m pip install --upgrade pip
+          pip install -r requirements.txt
           pip install pandas datetime pyarrow timezonefinder flask urllib3
 
           cd $GITHUB_WORKSPACE
           cp -rf ./assignment-6-test/* ./${{ github.repository }}/ironclad/
-          pip install -r ./${{ github.repository }}/techtrack/requirements.txt
+          pip install -r ./${{ github.repository }}/ironclad/requirements.txt
 
       # Runs unit test
       - name: Runs all unit tests for assignment 6
@@ -46,5 +47,5 @@ jobs:
         id: set_output_6
         uses: actions/upload-artifact@v4
         with:
-          name:  techtrack-3
+          name:  ironclad-3
           path:  /home/runner/work/ironclad
