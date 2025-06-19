@@ -42,7 +42,21 @@ class FaissHNSW:
             dim (int): The dimensionality of the embeddings.
             **kwargs: Optional keyword arguments to configure the HNSW index. Recognized keys include 'M' and 'efConstruction'.
         """
-        pass
+        self.dim = dim
+        self.metadata = []  # Will store associated metadata.
+        self.metric = kwargs.get('metric', 'euclidean').lower()
+        self.m = kwargs.get('M', 32)
+        self.efConstruction = kwargs.get('efConstruction', 40)
+
+        if self.metric in ['euclidean', 'minkowski']:
+            self.index = faiss.IndexHNSWFlat(dim, self.m, faiss.METRIC_L2)
+            self.index.hnsw.efConstruction = self.efConstruction
+        elif self.metric in ['cosine', 'dot_product']:
+            # Both cosine and dot_product use the inner-product index.
+            self.index = faiss.IndexHNSWFlat(dim, self.m, faiss.METRIC_INNER_PRODUCT)
+            self.index.hnsw.efConstruction = self.efConstruction
+        else:
+            raise ValueError("Unsupported metric. Use 'euclidean', 'cosine', or 'dot_product'.")
 
     def add_embeddings(self, new_embeddings, new_metadata):
         """
@@ -62,7 +76,20 @@ class FaissHNSW:
             ValueError: If the number of embeddings does not match the number of metadata entries.
             ValueError: If any individual embedding does not match the specified dimensionality.
         """
-        pass
+        if len(new_embeddings) != len(new_metadata):
+            raise ValueError("The number of embeddings must match the number of metadata entries.")
+
+        for emb, meta in zip(new_embeddings, new_metadata):
+            emb = np.array(emb)
+            if emb.shape[0] != self.dim:
+                raise ValueError(f"Embedding has dimension {emb.shape[0]}, expected {self.dim}.")
+            self.metadata.append(meta)
+            vector = emb.astype(np.float32).reshape(1, -1)
+            if self.metric == 'cosine':
+                # Normalize vector so that inner product corresponds to cosine similarity.
+                faiss.normalize_L2(vector)
+            # For 'euclidean' and 'dot_product', the vector is added as is.
+            self.index.add(vector)
 
     def get_metadata(self, idx):
         """
@@ -80,7 +107,9 @@ class FaissHNSW:
         Raises:
             IndexError: If the provided index is negative or exceeds the number of stored embeddings.
         """
-        pass
+        if idx < 0 or idx >= len(self.metadata):
+            raise IndexError("Index out of bounds.")
+        return self.metadata[idx]
 
     def save(self, filepath):
         """

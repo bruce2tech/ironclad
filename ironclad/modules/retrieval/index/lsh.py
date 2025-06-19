@@ -40,7 +40,10 @@ class FaissLSH:
                         A higher number of bits generally provides finer-grained buckets, which may improve accuracy
                         but at the cost of increased memory usage and slower search times. Default is 128.
         """
-        pass
+        self.dim = dim
+        self.metadata = []  # Will store associated metadata.
+        self.nbits = kwargs.get('nbits', 128)
+        self.index = faiss.IndexLSH(dim, self.nbits)
 
     def add_embeddings(self, embeddings, metadata):
         """
@@ -59,7 +62,16 @@ class FaissLSH:
             ValueError: If an embedding does not match the specified dimensionality.
             ValueError: If the lengths of embeddings and metadata do not match.
         """
-        pass
+        if len(embeddings) != len(metadata):
+            raise ValueError("The number of embeddings must match the number of metadata entries.")
+
+        for emb, meta in zip(embeddings, metadata):
+            emb = np.array(emb)
+            if emb.shape[0] != self.dim:
+                raise ValueError(f"Embedding has dimension {emb.shape[0]}, expected {self.dim}.")
+            self.metadata.append(meta)
+            vector = emb.astype(np.float32).reshape(1, -1)
+            self.index.add(vector)
 
     def get_metadata(self, idx):
         """
@@ -74,7 +86,9 @@ class FaissLSH:
         Raises:
             IndexError: If the index is out of range.
         """
-        pass
+        if idx < 0 or idx >= len(self.metadata):
+            raise IndexError("Index out of bounds.")
+        return self.metadata[idx]
 
     def save(self, filepath):
         """

@@ -1,3 +1,4 @@
+import faiss
 import numpy as np
 
 class FaissSearch:
@@ -31,22 +32,20 @@ class FaissSearch:
             ######################
             # ASSIGNMENT 6, TASK 1: Implement Euclidean
             ######################
-            pass
-
+            distances, indices = self.index.search(query_vector, k)
         elif self.metric == 'cosine':
             # For cosine similarity, normalize the query so that inner product corresponds to cosine.
             ##############################
             # ASSIGNMENT 6, TASK 2: Implement Cosine Similarity
             ##############################
-            pass
-
+            faiss.normalize_L2(query_vector)
+            distances, indices = self.index.search(query_vector, k)
         elif self.metric == 'dot_product':
             # For dot product, no normalization is applied (assuming the index is built appropriately).
             ########################
             # ASSIGNMENT 6, TASK 3: Implement Dot Product
             ########################
-            pass
-
+            distances, indices = self.index.search(query_vector, k)
         elif self.metric == 'minkowski':
             # For Minkowski, perform candidate selection via Euclidean search and then re-rank.
             # NOTE: Because FAISS does not support a minkowski metric, we will need to approximate the distance metric
@@ -69,7 +68,7 @@ class FaissSearch:
             raise ValueError("Unsupported metric. Use 'euclidean', 'cosine', 'dot_product', or 'minkowski'.")
 
         # Retrieve metadata for the nearest neighbors.
-        metadata_results = [self.faiss_index.get_metadata(int(i)) for i in indices[0]]
+        metadata_results = [[self.faiss_index.get_metadata(int(i)) if i != -1 else None for i in row] for row in indices]
         return distances, indices, metadata_results
 
     def _compute_minkowski(self, query_vector, nearest_vectors, p):
@@ -103,10 +102,14 @@ if __name__ == "__main__":
     search_euclidean = FaissSearch(faiss_index_bf, metric='euclidean')
     distances, indices, meta_results = search_euclidean.search(query_vector, k=5)
     for i in range(5):
-        print(f"Nearest Neighbor {i+1}: Index {indices[0][i]}, Distance {distances[0][i]}, Metadata: {meta_results[i]}")
+        print(f"Nearest Neighbor {i+1}: Index {indices[0][i]}, Distance {distances[0][i]}, Metadata: {meta_results[0][i]}")
+
+    # Construct the FaissBruteForce index with cosine measure.
+    faiss_index_bf = FaissBruteForce(dim=256, metric="cosine")
+    faiss_index_bf.add_embeddings(vectors, metadata=metadata)
 
     print("\nExample: BruteForce Search with `cosine` measure")
     search_cosine = FaissSearch(faiss_index_bf, metric='cosine')
     distances, indices, meta_results = search_cosine.search(query_vector, k=5)
     for i in range(5):
-        print(f"Nearest Neighbor {i+1}: Index {indices[0][i]}, Cosine Similarity {distances[0][i]}, Metadata: {meta_results[i]}")
+        print(f"Nearest Neighbor {i+1}: Index {indices[0][i]}, Cosine Similarity {distances[0][i]}, Metadata: {meta_results[0][i]}")
