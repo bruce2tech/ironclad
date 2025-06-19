@@ -25,12 +25,35 @@ jobs:
           path: ${{ github.repository }}
           ref: main
       
+      - name: setup assignment 5
+        run: |
+          # install the python packages for the grading repo
+          # pip install -r requirements.txt
+          python -m pip install --upgrade pip
+          pip install pandas datetime pyarrow timezonefinder flask urllib3
+
+          cd $GITHUB_WORKSPACE
+          cp -rf ./assignment-5-test/* ./${{ github.repository }}/ironclad/
+          pip install -r ./${{ github.repository }}/ironclad/requirements.txt
+
+      # Runs unit test
+      - name: Runs all unit tests for assignment 5
+        run: |
+          cd $GITHUB_WORKSPACE/${{ github.repository }}/ironclad/
+          python -m unittest -v unit-test.py 2> /home/runner/work/ironclad || true
+
+      - name: Save output as artifact
+        id: set_output_5
+        uses: actions/upload-artifact@v4
+        with:
+          name:  ironclad-5
+          path:  /home/runner/work/ironclad
+
       - name: setup assignment 6
         run: |
           # install the python packages for the grading repo
           # pip install -r requirements.txt
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
           pip install pandas datetime pyarrow timezonefinder flask urllib3
 
           cd $GITHUB_WORKSPACE
@@ -38,7 +61,7 @@ jobs:
           pip install -r ./${{ github.repository }}/ironclad/requirements.txt
 
       # Runs unit test
-      - name: Runs all unit tests for assignment 6
+      - name: Runs all unit tests for assignment 5
         run: |
           cd $GITHUB_WORKSPACE/${{ github.repository }}/ironclad/
           python -m unittest -v unit-test.py 2> /home/runner/work/ironclad || true
@@ -47,5 +70,5 @@ jobs:
         id: set_output_6
         uses: actions/upload-artifact@v4
         with:
-          name:  ironclad-3
+          name:  ironclad-6
           path:  /home/runner/work/ironclad

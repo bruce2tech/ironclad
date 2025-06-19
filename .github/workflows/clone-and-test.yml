@@ -42,7 +42,7 @@ jobs:
           pip install pandas datetime pyarrow timezonefinder flask urllib3
 
           cd $GITHUB_WORKSPACE
-          cp -r ./assignment-${{ github.event.inputs.assignment_num }}-test/* ./${{ github.event.inputs.repo_name }}/tecironcladhtrack/
+          cp -r ./assignment-${{ github.event.inputs.assignment_num }}-test/* ./${{ github.event.inputs.repo_name }}/ironclad/
           pip install -r ./${{ github.event.inputs.repo_name }}/ironclad/requirements.txt
 
       # Runs unit test
