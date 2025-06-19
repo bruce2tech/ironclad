@@ -2,6 +2,12 @@ import faiss
 import numpy as np
 import pickle
 
+########################################
+# ASSIGNMENT 5, TASK 3: 
+#         Implement `/add` endpoint to
+#         add the provided image to the 
+#         catalog.
+########################################
 
 class FaissHNSW:
     """
@@ -110,7 +116,6 @@ class FaissHNSW:
         return instance
 
 
-# Example usage of FaissHNSW class.
 if __name__ == "__main__":
 
     # Initialize a FaissHNSW index with embedding dimension 4 using custom HNSW parameters.

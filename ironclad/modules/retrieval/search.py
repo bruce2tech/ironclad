@@ -29,26 +29,28 @@ class FaissSearch:
         if self.metric == 'euclidean':
             # Default FAISS search with Euclidean (L2) distance.
             ######################
-            # Implement Euclidean
+            # ASSIGNMENT 6, TASK 1: Implement Euclidean
             ######################
             pass
 
         elif self.metric == 'cosine':
             # For cosine similarity, normalize the query so that inner product corresponds to cosine.
             ##############################
-            # Implement Cosine Similarity
+            # ASSIGNMENT 6, TASK 2: Implement Cosine Similarity
             ##############################
             pass
 
         elif self.metric == 'dot_product':
             # For dot product, no normalization is applied (assuming the index is built appropriately).
             ########################
-            # Implement Dot Product
+            # ASSIGNMENT 6, TASK 3: Implement Dot Product
             ########################
             pass
 
         elif self.metric == 'minkowski':
             # For Minkowski, perform candidate selection via Euclidean search and then re-rank.
+            # NOTE: Because FAISS does not support a minkowski metric, we will need to approximate the distance metric
+            # by retrieving a smaller set of candidates... 
             candidate_k = max(50, k * 10)
             distances_candidate, indices_candidate = self.index.search(query_vector, candidate_k)
             # Reconstruct candidate vectors using the FAISS index.

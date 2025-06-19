@@ -2,6 +2,12 @@ import numpy as np
 import pickle
 import faiss
 
+########################################
+# ASSIGNMENT 5, TASK 2: 
+#         Implement `/add` endpoint to
+#         add the provided image to the 
+#         catalog.
+########################################
 
 class FaissLSH:
     """
@@ -100,7 +106,6 @@ class FaissLSH:
         return instance
 
 
-# Example usage of FaissLSH class.
 if __name__ == "__main__":
     # Initialize a FaissLSH index with embedding dimension 4 using a custom nbits value.
     index = FaissLSH(dim=4, nbits=256)

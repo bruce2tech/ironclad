@@ -22,7 +22,7 @@ class Preprocessing:
         Parameters:
             image_size (int): The target size for the image. Default is 160.
         """
-        self.image_size = image_size  # E.g., 224 depending on model requirements
+        self.image_size = image_size  # E.g., 160 or 224 depending on model requirements
         self.preprocess_transform = transforms.Compose([
             transforms.Resize((self.image_size, self.image_size)),
             transforms.ToTensor(),

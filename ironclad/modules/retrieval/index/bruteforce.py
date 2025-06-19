@@ -2,6 +2,13 @@ import numpy as np
 import pickle
 import faiss
 
+########################################
+# ASSIGNMENT 5, TASK 1: 
+#         Implement `/add` endpoint to
+#         add the provided image to the 
+#         catalog.
+########################################
+
 class FaissBruteForce:
     """
     A brute-force FAISS index for storing embeddings and their associated metadata,
@@ -107,8 +114,6 @@ class FaissBruteForce:
 
 
 if __name__ == "__main__":
-    # Example usage of FaissBruteForce class.
-
     # Choose the metric: 'euclidean', 'cosine', or 'dot_product'
     metric = 'cosine'
     index = FaissBruteForce(dim=4, metric=metric)
