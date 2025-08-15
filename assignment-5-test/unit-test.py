@@ -3,8 +3,8 @@ import numpy as np
 import os
 import tempfile
 
-from modules.retrieval.index.lsh import FaissLSH  # Adjust this import to your actual module path
-from modules.retrieval.index.hnsw import FaissHNSW
+from ironclad.modules.retrieval.index.lsh import FaissLSH  # Adjust this import to your actual module path
+from ironclad.modules.retrieval.index.hnsw import FaissHNSW
 
 
 class TestFaissHNSW(unittest.TestCase):
@@ -166,8 +166,7 @@ from PIL import Image
 
 torch.set_num_threads(1) # Only used for MacOS. See: https://github.com/apple/ml-stable-diffusion/issues/8
 
-from app import app, index  # Adjust path as necessary
-
+from ironclad.app import app, index  # Adjust path as necessary
 class BaseFlaskTestCase(unittest.TestCase):
     def setUp(self):
         self.client = app.test_client()
