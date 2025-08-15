@@ -42,21 +42,40 @@ class FaissHNSW:
             dim (int): The dimensionality of the embeddings.
             **kwargs: Optional keyword arguments to configure the HNSW index. Recognized keys include 'M' and 'efConstruction'.
         """
-        self.dim = dim
+        self.dim = int(dim)
         self.metadata = []  # Will store associated metadata.
-        self.metric = kwargs.get('metric', 'euclidean').lower()
-        self.m = kwargs.get('M', 32)
-        self.efConstruction = kwargs.get('efConstruction', 40)
+        self.metric = str(kwargs.get('metric', 'euclidean')).lower()
+        self.m = int(kwargs.get('M', 32))
+        self.efConstruction = int(kwargs.get('efConstruction', 40))
+        self.efSearch = int(kwargs.get('efSearch', 50))
 
-        if self.metric in ['euclidean', 'minkowski']:
-            self.index = faiss.IndexHNSWFlat(dim, self.m, faiss.METRIC_L2)
-            self.index.hnsw.efConstruction = self.efConstruction
-        elif self.metric in ['cosine', 'dot_product']:
-            # Both cosine and dot_product use the inner-product index.
-            self.index = faiss.IndexHNSWFlat(dim, self.m, faiss.METRIC_INNER_PRODUCT)
-            self.index.hnsw.efConstruction = self.efConstruction
+        self.normalize = bool(kwargs.get('normalize', self.metric == 'cosine'))
+
+        # if self.metric in ['euclidean', 'minkowski']:
+        #     self.index = faiss.IndexHNSWFlat(dim, self.m, faiss.METRIC_L2)
+        #     self.index.hnsw.efConstruction = self.efConstruction
+        # elif self.metric in ['cosine', 'dot_product']:
+        #     # Both cosine and dot_product use the inner-product index.
+        #     self.index = faiss.IndexHNSWFlat(dim, self.m, faiss.METRIC_INNER_PRODUCT)
+        #     self.index.hnsw.efConstruction = self.efConstruction
+        # else:
+        #     raise ValueError("Unsupported metric. Use 'euclidean', 'cosine', or 'dot_product'.")
+        
+                # Choose FAISS metric
+        if self.metric in ('euclidean', 'l2', 'minkowski'):
+            metric_type = faiss.METRIC_L2
+        elif self.metric in ('cosine', 'dot_product', 'inner_product', 'ip'):
+            metric_type = faiss.METRIC_INNER_PRODUCT
         else:
             raise ValueError("Unsupported metric. Use 'euclidean', 'cosine', or 'dot_product'.")
+
+        # Build HNSW index
+        self.index = faiss.IndexHNSWFlat(self.dim, self.m, metric_type)
+        self.index.hnsw.efConstruction = self.efConstruction
+        self.index.hnsw.efSearch = self.efSearch
+
+        # Positional metadata list
+        self.metadata = []
 
     def add_embeddings(self, new_embeddings, new_metadata):
         """
@@ -76,20 +95,41 @@ class FaissHNSW:
             ValueError: If the number of embeddings does not match the number of metadata entries.
             ValueError: If any individual embedding does not match the specified dimensionality.
         """
-        if len(new_embeddings) != len(new_metadata):
+        # if len(new_embeddings) != len(new_metadata):
+        #     raise ValueError("The number of embeddings must match the number of metadata entries.")
+
+        # for emb, meta in zip(new_embeddings, new_metadata):
+        #     emb = np.array(emb)
+        #     if emb.shape[0] != self.dim:
+        #         raise ValueError(f"Embedding has dimension {emb.shape[0]}, expected {self.dim}.")
+        #     self.metadata.append(meta)
+        #     vector = emb.astype(np.float32).reshape(1, -1)
+        #     if self.metric == 'cosine':
+        #         # Normalize vector so that inner product corresponds to cosine similarity.
+        #         faiss.normalize_L2(vector)
+        #     # For 'euclidean' and 'dot_product', the vector is added as is.
+        #     self.index.add(vector)
+
+        X = np.asarray(new_embeddings, dtype=np.float32)
+        if X.ndim == 1:
+            if X.shape[0] != self.dim:
+                raise ValueError(f"Embedding has dimension {X.shape[0]}, expected {self.dim}.")
+            X = X.reshape(1, -1)
+        elif X.ndim == 2:
+            if X.shape[1] != self.dim:
+                raise ValueError(f"Embeddings have dimension {X.shape[1]}, expected {self.dim}.")
+        else:
+            raise ValueError("Embeddings must be 1D or 2D array-like.")
+
+        if len(new_metadata) != X.shape[0]:
             raise ValueError("The number of embeddings must match the number of metadata entries.")
 
-        for emb, meta in zip(new_embeddings, new_metadata):
-            emb = np.array(emb)
-            if emb.shape[0] != self.dim:
-                raise ValueError(f"Embedding has dimension {emb.shape[0]}, expected {self.dim}.")
-            self.metadata.append(meta)
-            vector = emb.astype(np.float32).reshape(1, -1)
-            if self.metric == 'cosine':
-                # Normalize vector so that inner product corresponds to cosine similarity.
-                faiss.normalize_L2(vector)
-            # For 'euclidean' and 'dot_product', the vector is added as is.
-            self.index.add(vector)
+        # If using cosine similarity via inner product, normalization improves results
+        if self.normalize:
+            faiss.normalize_L2(X)
+
+        self.index.add(X)
+        self.metadata.extend(new_metadata)  # positional mapping preserved
 
     def get_metadata(self, idx):
         """
@@ -122,8 +162,29 @@ class FaissHNSW:
         Parameters:
             filepath (str): The file path where the serialized instance will be saved.
         """
-        with open(filepath, 'wb') as f:
-            pickle.dump(self, f)
+        buf = faiss.serialize_index(self.index)
+        if isinstance(buf, (bytes, bytearray)):
+            index_bytes = bytes(buf)
+        else:
+            index_bytes = np.asarray(buf, dtype=np.uint8).tobytes()
+
+
+        state = {
+            "dim": self.dim,
+            "M": self.m,
+            "efConstruction": self.efConstruction,
+            "efSearch": self.efSearch,
+            "metric": self.metric,
+            "normalize": self.normalize,
+            "metadata": self.metadata,
+            "index_bytes": index_bytes,
+            "version": 1,
+        }
+        with open(filepath, "wb") as f:
+            pickle.dump(state, f)
+
+        # with open(filepath, 'wb') as f:
+        #     pickle.dump(self, f)
 
     @classmethod
     def load(cls, filepath):
@@ -140,15 +201,42 @@ class FaissHNSW:
         Returns:
             An instance of FaissHNSW with the state restored from the specified file.
         """
-        with open(filepath, 'rb') as f:
-            instance = pickle.load(f)
-        return instance
+
+        with open(filepath, "rb") as f:
+            loaded = pickle.load(f)
+
+        if isinstance(loaded, FaissHNSW):
+            return loaded
+        state = loaded
+        obj = cls(
+            dim=state["dim"],
+            M=state["M"],
+            efConstruction=state["efConstruction"],
+            efSearch=state["efSearch"],
+            metric=state.get("metric", "euclidean"),
+            normalize=state.get("normalize", state.get("metric", "euclidean") == "cosine"),
+        )
+        obj.metadata = state["metadata"]
+
+        arr = np.frombuffer(state["index_bytes"], dtype=np.uint8)
+        obj.index = faiss.deserialize_index(arr)
+
+        # (Re)apply efSearch in case you want to override post-load later
+        if hasattr(obj.index, "hnsw"):
+            obj.index.hnsw.efSearch = obj.efSearch
+
+        return obj
+
+        # with open(filepath, 'rb') as f:
+        #     instance = pickle.load(f)
+        # return instance
 
 
 if __name__ == "__main__":
 
     # Initialize a FaissHNSW index with embedding dimension 4 using custom HNSW parameters.
-    index = FaissHNSW(dim=4, M=16, efConstruction=50)
+    index = FaissHNSW(dim=4, M=16, efConstruction=50, efSearch=64, metric="cosine", normalize=True)
+    # index = FaissHNSW(dim=4, M=16, efConstruction=50)
 
     # Create some dummy embeddings and corresponding metadata.
     embeddings = [
@@ -164,6 +252,9 @@ if __name__ == "__main__":
 
     # Add the embeddings and metadata to the index.
     index.add_embeddings(embeddings, identity_metadata)
+
+    if index.normalize:
+        faiss.normalize_L2(query)
 
     # Let's search the index with a query vector.
     query = np.array([[0.1, 0.2, 0.3, 0.4]], dtype=np.float32)

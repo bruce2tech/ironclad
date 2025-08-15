@@ -4,9 +4,8 @@ import faiss
 
 ########################################
 # ASSIGNMENT 5, TASK 2: 
-#         Implement `/add` endpoint to
-#         add the provided image to the 
-#         catalog.
+#         Implement FaissLSH Class
+#         which wraps LSH
 ########################################
 
 class FaissLSH:
@@ -40,10 +39,11 @@ class FaissLSH:
                         A higher number of bits generally provides finer-grained buckets, which may improve accuracy
                         but at the cost of increased memory usage and slower search times. Default is 128.
         """
-        self.dim = dim
+        self.dim = int(dim)
         self.metadata = []  # Will store associated metadata.
-        self.nbits = kwargs.get('nbits', 128)
+        self.nbits = int(kwargs.get('nbits', 128))
         self.index = faiss.IndexLSH(dim, self.nbits)
+        self.normalize = bool(kwargs.get('normalize', True))
 
     def add_embeddings(self, embeddings, metadata):
         """
@@ -62,16 +62,39 @@ class FaissLSH:
             ValueError: If an embedding does not match the specified dimensionality.
             ValueError: If the lengths of embeddings and metadata do not match.
         """
-        if len(embeddings) != len(metadata):
+        # if len(embeddings) != len(metadata):
+        #     raise ValueError("The number of embeddings must match the number of metadata entries.")
+
+        # for emb, meta in zip(embeddings, metadata):
+        #     emb = np.array(emb)
+        #     if emb.shape[0] != self.dim:
+        #         raise ValueError(f"Embedding has dimension {emb.shape[0]}, expected {self.dim}.")
+        #     self.metadata.append(meta)
+        #     vector = emb.astype(np.float32).reshape(1, -1)
+        #     self.index.add(vector)
+        
+        X = np.asarray(embeddings, dtype=np.float32)
+        if X.ndim == 1:
+            if X.shape[0] != self.dim:
+                raise ValueError(f"Embedding has dimension {X.shape[0]}, expected {self.dim}.")
+            X = X.reshape(1, -1)
+        elif X.ndim == 2:
+            if X.shape[1] != self.dim:
+                raise ValueError(f"Embeddings have dimension {X.shape[1]}, expected {self.dim}.")
+        else:
+            raise ValueError("Embeddings must be 1D or 2D array-like.")
+
+        if len(metadata) != X.shape[0]:
             raise ValueError("The number of embeddings must match the number of metadata entries.")
 
-        for emb, meta in zip(embeddings, metadata):
-            emb = np.array(emb)
-            if emb.shape[0] != self.dim:
-                raise ValueError(f"Embedding has dimension {emb.shape[0]}, expected {self.dim}.")
-            self.metadata.append(meta)
-            vector = emb.astype(np.float32).reshape(1, -1)
-            self.index.add(vector)
+        # Normalization improves LSH behavior for angular similarity
+        if self.normalize:
+            faiss.normalize_L2(X)
+
+        # Add to FAISS and store metadata in the same order
+        self.index.add(X)
+        self.metadata.extend(metadata)  # positional mapping preserved
+
 
     def get_metadata(self, idx):
         """
@@ -99,8 +122,23 @@ class FaissLSH:
         Parameters:
             filepath (str): The path to the file where the instance should be saved.
         """
+
+        buf = faiss.serialize_index(self.index)
+        if isinstance(buf, (bytes, bytearray)):
+            index_bytes = bytes(buf)
+        else:
+            index_bytes = np.asarray(buf, dtype=np.uint8).tobytes()
+        state = {
+            "version":1,
+            "dim": self.dim,
+            "nbits": self.nbits,
+            "normalize": self.normalize,
+            "metadata": self.metadata,
+            "index_bytes": index_bytes,
+        }
+
         with open(filepath, 'wb') as f:
-            pickle.dump(self, f)
+            pickle.dump(state, f)
 
     @classmethod
     def load(cls, filepath):
@@ -116,8 +154,20 @@ class FaissLSH:
             An instance of FaissLSH loaded from the file.
         """
         with open(filepath, 'rb') as f:
-            instance = pickle.load(f)
-        return instance
+            loaded = pickle.load(f)
+
+        if isinstance(loaded, FaissLSH):
+            return loaded
+
+        state = loaded
+        obj = cls(dim=state["dim"], nbits=state["nbits"], normalize=state.get("normalize", True))
+        obj.metadata = state["metadata"]
+
+        arr = np.frombuffer(state["index_bytes"], dtype=np.uint8)
+        obj.index = faiss.deserialize_index(arr)
+
+        return obj
+        # return instance
 
 
 if __name__ == "__main__":
@@ -141,6 +191,7 @@ if __name__ == "__main__":
 
     # Query the index with a vector.
     query = np.array([[0.1, 0.2, 0.3, 0.4]], dtype=np.float32)
+    faiss.normalize_L2(query)
     k = 2  # number of nearest neighbors to retrieve
     distances, indices = index.index.search(query, k)
     meta_results = [index.get_metadata(int(i)) for i in indices[0]]
