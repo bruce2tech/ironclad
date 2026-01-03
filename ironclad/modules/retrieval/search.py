@@ -33,13 +33,40 @@ class FaissSearch:
             # ASSIGNMENT 6, TASK 1: Implement Euclidean
             ######################
             distances, indices = self.index.search(query_vector, k)
+        # elif self.metric == 'cosine':
+        #     # For cosine similarity, normalize the query so that inner product corresponds to cosine.
+        #     ##############################
+        #     # ASSIGNMENT 6, TASK 2: Implement Cosine Similarity
+        #     ##############################
+        #     faiss.normalize_L2(query_vector)
+        #     distances, indices = self.index.search(query_vector, k)
+        
         elif self.metric == 'cosine':
-            # For cosine similarity, normalize the query so that inner product corresponds to cosine.
-            ##############################
-            # ASSIGNMENT 6, TASK 2: Implement Cosine Similarity
-            ##############################
             faiss.normalize_L2(query_vector)
-            distances, indices = self.index.search(query_vector, k)
+
+            metric_type = getattr(self.index, "metric_type", None)
+            if metric_type == faiss.METRIC_INNER_PRODUCT:
+                # Native cosine via IP
+                sims, indices = self.index.search(query_vector, k)
+                distances = 1.0 - sims
+            elif metric_type == faiss.METRIC_L2:
+                # Fallback: candidate pull with L2, then re-rank by cosine
+                candidate_k = max(50, k * 10)
+                _, indices_cand = self.index.search(query_vector, candidate_k)
+
+                cand_vecs = np.array([self.index.reconstruct(int(i)) for i in indices_cand[0]], dtype=np.float32)
+                faiss.normalize_L2(cand_vecs)
+
+                sims = cand_vecs @ query_vector[0]
+                order = np.argsort(-sims)[:k]
+                selected = indices_cand[0][order]
+                distances = (1.0 - sims[order]).reshape(1, -1)
+                indices = selected.reshape(1, -1)
+            else:
+                # Unknown metric type; assume IP-like
+                sims, indices = self.index.search(query_vector, k)
+                distances = 1.0 - sims
+
         elif self.metric == 'dot_product':
             # For dot product, no normalization is applied (assuming the index is built appropriately).
             ########################

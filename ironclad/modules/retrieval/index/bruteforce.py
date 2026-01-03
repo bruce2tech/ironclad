@@ -69,6 +69,33 @@ class FaissBruteForce:
             # For 'euclidean' and 'dot_product', the vector is added as is.
             self.index.add(vector)
 
+    def search(self, query_vector, k=5):
+        """
+        Brute-force search using this index's metric.
+        - euclidean/minkowski: returns FAISS L2 distances (lower is better)
+        - cosine: normalizes query, uses IP search, and returns cosine *distance* = 1 - similarity
+        - dot_product: returns FAISS inner-product scores (higher is better)
+        """
+        q = np.array(query_vector, dtype=np.float32)
+        if q.ndim == 1:
+            q = q.reshape(1, -1)
+
+        if self.metric == 'cosine':
+            faiss.normalize_L2(q)                 # query must be unit-norm
+            sims, indices = self.index.search(q, k)   # IP scores (higher is better)
+            distances = 1.0 - sims                # convert to distances so 'lower is better'
+            return distances, indices
+
+        elif self.metric in ['euclidean', 'minkowski']:
+            distances, indices = self.index.search(q, k)
+            return distances, indices
+
+        elif self.metric == 'dot_product':
+            distances, indices = self.index.search(q, k)  # raw IP scores
+            return distances, indices
+
+        else:
+            raise ValueError("Unsupported metric. Use 'euclidean', 'cosine', or 'dot_product'.")
 
     def get_metadata(self, idx):
         """

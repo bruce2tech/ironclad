@@ -1,0 +1,19 @@
+storage/
+.DS_Store
+ironclad/__pycache__/
+ironclad/modules/extraction/__pycache__/
+ironclad/modules/retrieval/__pycache__/
+ironclad/modules/retrieval/index/__pycache__/
+
+# Data and results folders
+*.tsv
+npz/
+chips/
+results_hnsw_lsh/
+project-ironclad-bruce2tech/
+
+# Build artifacts
+compute
+__pycache__/
+*.pyc
+*.pyo
