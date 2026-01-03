@@ -167,6 +167,46 @@ Key findings from benchmarking:
 
 This project was developed as part of a graduate course in Creating AI-Enabled Systems at Johns Hopkins University. It demonstrates practical implementation of face recognition systems, similarity search algorithms, and comprehensive performance evaluation methodologies.
 
+## Attribution
+
+This repository originated from a course project at Johns Hopkins University. While the course provided initial starter code and project specifications, the majority of the implementation represents significant original work beyond the base requirements.
+
+### Original Contributions (Patrick Bruce):
+
+**Benchmarking & Performance Analysis:**
+- Complete benchmarking suite (`compare_*.py`, `evaluate_*.py`, `benchmark_*.py`)
+- Performance comparison framework (HNSW vs LSH vs Brute-Force)
+- Robustness testing (noise, resize, brightness variations)
+- Parameter tuning and optimization scripts
+- Statistical analysis and visualization tools
+
+**Advanced Features:**
+- LSH (Locality-Sensitive Hashing) implementation and integration
+- Enhanced HNSW parameter optimization
+- Multi-model comparison framework
+- Embedding pre-computation utilities
+- Extended preprocessing pipeline
+
+**Documentation & Demo:**
+- Interactive Jupyter notebook demo
+- Comprehensive README documentation
+- Sample dataset curation
+- API usage examples
+
+**Code Enhancements:**
+- Enhanced embedding extraction modules
+- Improved search algorithms
+- Additional utility scripts
+- Performance optimization
+
+### Course-Provided Base Components:
+- Initial project structure and specifications
+- Base Flask API framework
+- Core module interfaces
+- Assignment requirements
+
+**Note:** The extensive benchmarking suite, performance analysis tools, and demo materials demonstrate work that significantly extends beyond the original course requirements.
+
 ## Author
 
 Patrick Bruce
