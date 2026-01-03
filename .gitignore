@@ -12,6 +12,9 @@ chips/
 results_hnsw_lsh/
 project-ironclad-bruce2tech/
 
+# Exception: Include demo data
+!demo_data/
+
 # Build artifacts
 compute
 __pycache__/

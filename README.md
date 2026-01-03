@@ -56,6 +56,26 @@ Adds a new face to the gallery.
 curl -X POST -F "image=@person.jpg" -F "name=John_Doe" http://localhost:5000/add
 ```
 
+## Demo Data
+
+The repository includes a small sample dataset in `demo_data/` for quick testing and demonstrations:
+
+```
+demo_data/
+├── gallery/          # Gallery images (5 people)
+│   ├── Aaron_Sorkin/
+│   ├── Abdullah_Gul/
+│   ├── Adam_Scott/
+│   ├── Abel_Pacheco/
+│   └── Adolfo_Rodriguez_Saa/
+└── queries/          # Query images for testing
+    ├── Aaron_Sorkin/
+    ├── Abdullah_Gul/
+    └── Adam_Scott/
+```
+
+**For larger datasets:** The full benchmarking suite was tested on CASIA-WebFace and VGGFace2 datasets. You can download these public datasets separately and place them in the `chips/` directory.
+
 ## Benchmarking and Evaluation
 
 This project includes comprehensive benchmarking tools for comparing different retrieval methods:
@@ -92,7 +112,33 @@ This project includes comprehensive benchmarking tools for comparing different r
 - **Image Processing**: PIL, OpenCV
 - **Scientific Computing**: NumPy, SciPy
 
-## Installation
+## Quick Start
+
+### Option 1: Interactive Demo (Recommended for First-Time Users)
+
+Try the Jupyter notebook demo with sample data included in the repository:
+
+```bash
+# Clone the repository
+git clone https://github.com/bruce2tech/ironclad.git
+cd ironclad
+
+# Install dependencies
+pip install torch torchvision pillow numpy faiss-cpu flask matplotlib scikit-learn jupyter
+
+# Launch the demo notebook
+jupyter notebook demo.ipynb
+```
+
+The demo notebook includes:
+- Sample face images (5 people, 19 images total)
+- Step-by-step walkthrough of face recognition
+- Performance comparisons between search methods
+- Embedding space visualization
+
+### Option 2: Full Installation
+
+For production use with your own datasets:
 
 ```bash
 # Clone the repository
