@@ -1,0 +1,23 @@
+# Core Dependencies
+Flask>=2.0.0
+torch>=1.9.0
+torchvision>=0.10.0
+facenet-pytorch>=2.5.0
+Pillow>=8.3.0
+numpy>=1.21.0
+
+# Similarity Search
+faiss-cpu>=1.7.0
+
+# Data Science & Visualization
+scikit-learn>=0.24.0
+matplotlib>=3.4.0
+seaborn>=0.11.0
+scipy>=1.7.0
+
+# Demo & Development (Optional)
+jupyter>=1.0.0
+notebook>=6.4.0
+
+# Utilities
+tqdm>=4.62.0
