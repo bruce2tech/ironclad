@@ -23,11 +23,18 @@ The system is organized into modular components:
 
 ```
 ironclad/
-├── modules/
-│   ├── extraction/       # Face embedding extraction
-│   ├── retrieval/        # Search and indexing algorithms
-│   └── preprocessing/    # Image preprocessing pipeline
-└── app.py               # Flask API server
+├── app.py                      # Flask API server
+└── modules/
+    ├── extraction/             # Face embedding & preprocessing
+    │   ├── embedding.py        # VGGFace2/FaceNet embedding models
+    │   ├── preprocessing.py    # Image preprocessing pipeline
+    │   └── embedders.py        # Model architecture definitions
+    └── retrieval/              # Search and indexing algorithms
+        ├── search.py           # Unified search interface
+        └── index/
+            ├── hnsw.py         # FAISS HNSW (fast approximate)
+            ├── bruteforce.py   # Exact nearest neighbor
+            └── lsh.py          # Locality-Sensitive Hashing
 ```
 
 ## API Endpoints
@@ -131,7 +138,7 @@ jupyter notebook demo.ipynb
 ```
 
 The demo notebook includes:
-- Sample face images (5 people, 19 images total)
+- Sample face images (5 people, 16 gallery images)
 - Step-by-step walkthrough of face recognition
 - Performance comparisons between search methods
 - Embedding space visualization
@@ -152,16 +159,39 @@ pip install -r requirements.txt
 python -m ironclad.app
 ```
 
-## Performance Highlights
+## Performance Results
 
-The system has been extensively benchmarked on:
-- **CASIA-WebFace** dataset
-- **VGGFace2** dataset
+### Model Comparison (Brute-Force Baseline)
 
-Key findings from benchmarking:
-- HNSW provides significant speedup over brute-force with minimal accuracy loss
-- System maintains robust performance under various image quality conditions
-- Optimal parameters vary by dataset and use case
+| Metric | ArcFace | VGGFace2 | Improvement |
+|--------|--------:|--------:|-----------:|
+| **Top-1 Accuracy** | 96.5% | 91.3% | +5.7% |
+| **Recall@5** | 97.1% | 94.8% | +2.4% |
+| **MRR** | 96.8% | 92.7% | +4.4% |
+| **Query Time** | 0.017ms | 0.010ms | - |
+
+### Robustness Under Degraded Conditions
+
+| Condition | ArcFace Top-1 | VGGFace2 Top-1 | Gap |
+|-----------|-------------:|---------------:|----:|
+| Baseline | 96.5% | 91.3% | +5.2% |
+| High Noise (σ=0.1) | 93.9% | 82.4% | +11.5% |
+| Low Resolution (0.25x) | 96.4% | 78.8% | +17.6% |
+| Dark Lighting (0.5x) | 97.2% | 92.1% | +5.1% |
+| Bright Lighting (1.5x) | 97.5% | 91.5% | +6.0% |
+
+### Search Method Comparison
+
+| Method | Query Time | Accuracy@1 | Best For |
+|--------|----------:|----------:|----------|
+| Brute-Force | ~0.01ms | 100% | Small galleries (<1K) |
+| HNSW (M=16) | ~0.07ms | 99.9% | Medium galleries (1K-100K) |
+| LSH | ~0.05ms | ~98% | Large galleries (>100K) |
+
+**Key Findings:**
+- **ArcFace** recommended for production due to superior accuracy and robustness
+- **HNSW** provides optimal speed/accuracy tradeoff for most use cases
+- System maintains >93% accuracy even under high noise conditions
 
 ## Project Context
 

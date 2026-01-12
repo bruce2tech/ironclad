@@ -39,7 +39,7 @@ INDEX = 'hnsw'
 SIMILARITY_MEASURE = 'cosine'
 SAVE_INDEX = False
 INDEX_PATH = 'scripts/faiss_hnsw_index.pkl'
-GALLERY_DIR = '../storage/multi_image_gallery'  # folder to store original images
+GALLERY_DIR = 'gallery'  # folder to store original images
 ALLOW_DUPLICATE_NAMES = False
 os.makedirs(GALLERY_DIR, exist_ok=True)
 # Add more if needed...
@@ -84,7 +84,6 @@ def identify():
     # Convert the image into a NumPy array
     try:
         image = np.array(Image.open(file))
-        print(image)
     except Exception as e:
         return jsonify({
             "Error": "Failed to convert image to numpy array",
@@ -99,9 +98,6 @@ def identify():
     image_tensor = preprocessor.process(Image.fromarray(image))
     embedding = model.encode(image_tensor)
     distances, indices, metadatas = search.search(embedding, k)
-    print("distances: ", distances)
-    print("indices: ", indices)
-    print("metadatas: ", metadatas)
     identities = [name for name in metadatas[0] if name is not None]
     return jsonify({
         "message": f"Returned top-{k} identities",
@@ -187,48 +183,6 @@ def add():
         "name": name,
         "gallery_path": save_path
     }), 200
-
-#     # Check if the request has the image file
-#     if 'image' not in request.files:
-#         return jsonify({"Error": "No image part in the request"}), 400
-
-#     file = request.files['image']
-#     if not file or file.filename == '':
-#         return jsonify({"Error": "No file selected for uploading"}), 400
-
-#     # Convert the image into a NumPy array
-#     try:
-#         image = np.array(Image.open(file))
-#         print(image)
-#     except Exception as e:
-#         return jsonify({
-#             "error": "Failed to convert image to numpy array",
-#             "details": str(e)
-#         }), 500
-
-#     # Retrieve the 'name' parameter
-#     name = request.form.get('name')
-#     if not name:
-#         return jsonify({"Error": "Must have associated 'name'"}), 400
-
-#     ########################################
-#     # TASK 1b: Implement `/add` endpoint to
-#     #         add the provided image to the 
-#     #         catalog.
-#     ########################################
-#     if name in index.metadata:
-#         return jsonify({"Error": f"The image {name} already existed."}), 400
-
-#     image_tensor = preprocessor.process(Image.fromarray(image))
-#     embedding = model.encode(image_tensor)
-#     index.add_embeddings([embedding], [name])
-
-#     if SAVE_INDEX:
-#         index.save(INDEX_PATH)
-
-#     return jsonify({
-#         "message": f"New image added to gallery (as {name}) and indexed into catalog."
-#     })
 
 
 if __name__ == '__main__':
