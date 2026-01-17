@@ -28,18 +28,8 @@ class FaissSearch:
             query_vector = query_vector.reshape(1, -1)
 
         if self.metric == 'euclidean':
-            # Default FAISS search with Euclidean (L2) distance.
-            ######################
-            # ASSIGNMENT 6, TASK 1: Implement Euclidean
-            ######################
+            # L2 distance search - native FAISS implementation
             distances, indices = self.index.search(query_vector, k)
-        # elif self.metric == 'cosine':
-        #     # For cosine similarity, normalize the query so that inner product corresponds to cosine.
-        #     ##############################
-        #     # ASSIGNMENT 6, TASK 2: Implement Cosine Similarity
-        #     ##############################
-        #     faiss.normalize_L2(query_vector)
-        #     distances, indices = self.index.search(query_vector, k)
         
         elif self.metric == 'cosine':
             faiss.normalize_L2(query_vector)
@@ -68,10 +58,7 @@ class FaissSearch:
                 distances = 1.0 - sims
 
         elif self.metric == 'dot_product':
-            # For dot product, no normalization is applied (assuming the index is built appropriately).
-            ########################
-            # ASSIGNMENT 6, TASK 3: Implement Dot Product
-            ########################
+            # Inner product search - no normalization applied
             distances, indices = self.index.search(query_vector, k)
         elif self.metric == 'minkowski':
             # For Minkowski, perform candidate selection via Euclidean search and then re-rank.

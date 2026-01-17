@@ -121,6 +121,18 @@ pip install -r requirements.txt
 
 python -m ironclad.app
 ```
+Open a second terminal to interact with the app. 
+
+Note: The Flask app is an API-only backend, not a website with a web interface. There's no HTML page to view—it only responds to API requests, like the curl commands.
+
+Terminal 1: Keep the server running with python -m ironclad.app
+
+Terminal 2: Run the curl commands to hit the API
+
+- Add the images in the "ironclad/"demo_data/gallery/" folder
+- Use curl -X POST -F "image=@filepath/query.jpg" -F "k=3" http://localhost:5000/identify
+- Query the images in the "ironclad/"demo_data/query/" folder
+- Use curl -X POST -F "image=@filepath/person.jpg" -F "name=John_Doe" http://localhost:5000/add
 
 ## Evaluation Suite
 

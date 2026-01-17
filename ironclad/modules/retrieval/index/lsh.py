@@ -2,11 +2,6 @@ import numpy as np
 import pickle
 import faiss
 
-########################################
-# ASSIGNMENT 5, TASK 2: 
-#         Implement FaissLSH Class
-#         which wraps LSH
-########################################
 
 class FaissLSH:
     """
